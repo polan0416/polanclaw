@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>PolanClaw Web Chat</title>
+		<style>
+			:root {
+				color-scheme: dark;
+				--bg: #101418;
+				--panel: #171c22;
+				--border: #2a323c;
+				--text: #dbe4ee;
+				--muted: #8b98a7;
+				--accent: #5b8def;
+				--user: #23486e;
+				--assistant: #232a33;
+				--danger: #e06c6c;
+			}
+			* {
+				box-sizing: border-box;
+			}
+			html,
+			body {
+				margin: 0;
+				height: 100%;
+			}
+			body {
+				display: flex;
+				flex-direction: column;
+				background: var(--bg);
+				color: var(--text);
+				font: 15px/1.55 system-ui, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+			}
+			header {
+				padding: 14px 20px;
+				border-bottom: 1px solid var(--border);
+				display: flex;
+				align-items: baseline;
+				gap: 12px;
+				flex-wrap: wrap;
+			}
+			header h1 {
+				font-size: 18px;
+				margin: 0;
+				font-weight: 600;
+			}
+			header .hint {
+				color: var(--muted);
+				font-size: 13px;
+			}
+			main {
+				flex: 1;
+				overflow-y: auto;
+				padding: 18px 20px;
+				display: flex;
+				flex-direction: column;
+				gap: 12px;
+				max-width: 960px;
+				width: 100%;
+				margin: 0 auto;
+			}
+			section#setup {
+				max-width: 960px;
+				width: 100%;
+				margin: 16px auto 0;
+				padding: 0 20px;
+			}
+			.panel {
+				background: var(--panel);
+				border: 1px solid var(--border);
+				border-radius: 10px;
+				padding: 14px;
+			}
+			.panel h2 {
+				margin: 0 0 8px;
+				font-size: 15px;
+			}
+			.panel p {
+				margin: 6px 0;
+				color: var(--muted);
+				font-size: 13px;
+			}
+			.row {
+				display: flex;
+				gap: 8px;
+				flex-wrap: wrap;
+			}
+			input,
+			textarea,
+			button {
+				font: inherit;
+				color: var(--text);
+			}
+			input[type="password"],
+			textarea {
+				background: #0d1116;
+				border: 1px solid var(--border);
+				border-radius: 8px;
+				padding: 9px 11px;
+				width: 100%;
+				outline: none;
+			}
+			input[type="password"]:focus,
+			textarea:focus {
+				border-color: var(--accent);
+			}
+			button {
+				background: var(--accent);
+				color: #fff;
+				border: 0;
+				border-radius: 8px;
+				padding: 9px 16px;
+				cursor: pointer;
+				font-weight: 600;
+			}
+			button.secondary {
+				background: transparent;
+				color: var(--muted);
+				border: 1px solid var(--border);
+			}
+			button:disabled {
+				opacity: 0.5;
+				cursor: not-allowed;
+			}
+			.msg {
+				max-width: 88%;
+				padding: 10px 13px;
+				border-radius: 12px;
+				white-space: pre-wrap;
+				word-break: break-word;
+				overflow-wrap: anywhere;
+			}
+			.msg.user {
+				align-self: flex-end;
+				background: var(--user);
+			}
+			.msg.assistant {
+				align-self: flex-start;
+				background: var(--assistant);
+				border: 1px solid var(--border);
+			}
+			.msg .label {
+				display: block;
+				font-size: 11px;
+				opacity: 0.65;
+				margin-bottom: 4px;
+				letter-spacing: 0.4px;
+			}
+			.msg pre {
+				margin: 0;
+				font: inherit;
+				white-space: pre-wrap;
+				word-break: break-word;
+				overflow-wrap: anywhere;
+				max-height: 60vh;
+				overflow-y: auto;
+			}
+			form#composer {
+				border-top: 1px solid var(--border);
+				padding: 12px 20px 16px;
+				background: var(--panel);
+				display: flex;
+				gap: 10px;
+				align-items: flex-end;
+				max-width: 960px;
+				width: 100%;
+				margin: 0 auto;
+			}
+			#composer textarea {
+				flex: 1;
+				resize: none;
+				min-height: 44px;
+				max-height: 200px;
+			}
+			#status {
+				margin: 0;
+				font-size: 13px;
+				color: var(--muted);
+				min-height: 18px;
+				text-align: center;
+				padding: 6px 0 2px;
+				background: var(--panel);
+			}
+			#status.error {
+				color: var(--danger);
+			}
+			.center {
+				text-align: center;
+				color: var(--muted);
+				font-size: 14px;
+				padding: 30px 0;
+			}
+			.hidden {
+				display: none;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<h1>PolanClaw Web Chat</h1>
+			<span class="hint">只读 Agent · 代码库问答（read / grep / find / ls）</span>
+		</header>
+
+		<section id="setup" class="hidden">
+			<div class="panel">
+				<h2>连接</h2>
+				<p>请输入访问 Token。Token 只保存在当前浏览器标签页的 sessionStorage 中，关闭标签页即清除。</p>
+				<div class="row">
+					<input id="tokenInput" type="password" placeholder="POLANCLAW_WEB_TOKEN" autocomplete="off" />
+					<button id="saveTokenBtn" type="button">保存并连接</button>
+				</div>
+			</div>
+		</section>
+
+		<main id="chat" aria-live="polite">
+			<div class="center">正在初始化…</div>
+		</main>
+
+		<form id="composer" autocomplete="off">
+			<textarea id="messageInput" rows="1" placeholder="向只读 Agent 提问…（Enter 发送，Shift+Enter 换行）"></textarea>
+			<button id="sendBtn" type="submit">发送</button>
+		</form>
+		<p id="status" role="status"></p>
+
+		<noscript>
+			<p class="center">本页面需要启用 JavaScript 才能聊天。</p>
+		</noscript>
+
+		<script>
+			"use strict";
+			(() => {
+				const TOKEN_KEY = "polanclaw.web.token";
+				const MAX_MESSAGE_CHARS = 8000;
+
+				const $ = (id) => document.getElementById(id);
+				const setupEl = $("setup");
+				const tokenInput = $("tokenInput");
+				const saveTokenBtn = $("saveTokenBtn");
+				const chatEl = $("chat");
+				const composer = $("composer");
+				const messageInput = $("messageInput");
+				const sendBtn = $("sendBtn");
+				const statusEl = $("status");
+
+				let token = sessionStorage.getItem(TOKEN_KEY) || "";
+				let busy = false;
+
+				// ---- 仅使用 textContent / DOM API 渲染，禁止把任何内容写入 innerHTML ----
+				function appendBubble(kind, text) {
+					const wrap = document.createElement("div");
+					wrap.className = "msg " + kind;
+
+					const label = document.createElement("span");
+					label.className = "label";
+					label.textContent = kind === "user" ? "你" : "Agent";
+					wrap.appendChild(label);
+
+					const pre = document.createElement("pre");
+					pre.textContent = text;
+					wrap.appendChild(pre);
+
+					chatEl.appendChild(wrap);
+					chatEl.scrollTop = chatEl.scrollHeight;
+				}
+
+				function clearChat() {
+					while (chatEl.firstChild) chatEl.removeChild(chatEl.firstChild);
+				}
+
+				function setStatus(text, isError) {
+					statusEl.textContent = text;
+					statusEl.classList.toggle("error", !!isError);
+				}
+
+				function updateUi() {
+					const hasToken = !!token;
+					setupEl.classList.toggle("hidden", hasToken);
+					composer.classList.toggle("hidden", !hasToken);
+					sendBtn.disabled = busy || !hasToken;
+					messageInput.disabled = busy || !hasToken;
+					if (hasToken) setStatus(busy ? "Agent 正在处理…（同一时间只处理一个请求）" : "已连接。Token 仅保存在本页 sessionStorage。");
+					else setStatus("请先输入访问 Token。");
+				}
+
+				// ---- Token（仅 sessionStorage） ----
+				function applyToken(value) {
+					token = value;
+					if (value) sessionStorage.setItem(TOKEN_KEY, value);
+					else sessionStorage.removeItem(TOKEN_KEY);
+					updateUi();
+					if (value) messageInput.focus();
+				}
+
+				saveTokenBtn.addEventListener("click", () => {
+					const value = tokenInput.value.trim();
+					if (!value) {
+						setStatus("Token 不能为空。", true);
+						return;
+					}
+					applyToken(value);
+					tokenInput.value = "";
+					setStatus("已连接。Token 仅保存在本页 sessionStorage。");
+				});
+
+				tokenInput.addEventListener("keydown", (e) => {
+					if (e.key === "Enter") {
+						e.preventDefault();
+						saveTokenBtn.click();
+					}
+				});
+
+				// ---- 发送消息 ----
+				async function send(text) {
+					if (busy || !token || !text) return;
+					busy = true;
+					updateUi();
+					appendBubble("user", text);
+
+					let response;
+					try {
+						response = await fetch("/api/message", {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+								Authorization: "Bearer " + token,
+							},
+							body: JSON.stringify({ text }),
+						});
+					} catch (err) {
+						setStatus("网络错误：" + (err && err.message ? err.message : String(err)), true);
+						busy = false;
+						updateUi();
+						return;
+					}
+
+					let data = null;
+					try {
+						data = await response.json();
+					} catch {
+						/* 非 JSON 响应 */
+					}
+
+					if (response.ok) {
+						const reply = data && typeof data.text === "string" ? data.text : "";
+						appendBubble("assistant", reply || "（Agent 返回了空回复）");
+						setStatus("已回复。");
+					} else if (response.status === 401) {
+						setStatus("Token 无效或已过期，请重新输入。", true);
+						applyToken("");
+						appendBubble("assistant", "⚠ 未授权：需要有效的访问 Token（Authorization: Bearer）。");
+					} else if (response.status === 409) {
+						setStatus("服务正忙：已有另一个 Agent 请求在处理中，请稍后重试。", true);
+					} else {
+						const msg = data && typeof data.error === "string" ? data.error : "请求失败（HTTP " + response.status + "）。";
+						setStatus(msg, true);
+						appendBubble("assistant", "⚠ " + msg);
+					}
+
+					busy = false;
+					updateUi();
+				}
+
+				composer.addEventListener("submit", (e) => {
+					e.preventDefault();
+					const text = messageInput.value.trim();
+					if (!text) return;
+					if (text.length > MAX_MESSAGE_CHARS) {
+						setStatus("消息超过 " + MAX_MESSAGE_CHARS + " 字符上限。", true);
+						return;
+					}
+					messageInput.value = "";
+					messageInput.style.height = "auto";
+					void send(text);
+				});
+
+				messageInput.addEventListener("keydown", (e) => {
+					if (e.key === "Enter" && !e.shiftKey) {
+						e.preventDefault();
+						composer.requestSubmit();
+					}
+				});
+
+				// 自动增高输入框
+				messageInput.addEventListener("input", () => {
+					messageInput.style.height = "auto";
+					messageInput.style.height = Math.min(messageInput.scrollHeight, 200) + "px";
+				});
+
+				// 已有 Token：直接连接；否则要求输入
+				if (token) {
+					clearChat();
+					appendBubble("assistant", "已连接。我是运行在仓库工作目录上的只读 Agent，可以使用 read / grep / find / ls 工具回答关于代码的问题。");
+				} else {
+					clearChat();
+					appendBubble("assistant", "请先在上方输入访问 Token（仅保存在本页 sessionStorage）以开始聊天。");
+				}
+				updateUi();
+			})();
+		</script>
+	</body>
+</html>
