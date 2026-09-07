@@ -1,0 +1,3 @@
+decoy.txt deliberately does NOT contain the needle keyword Q9X8W7.
+
+Keep this file out of search results.

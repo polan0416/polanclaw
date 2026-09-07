@@ -1,0 +1,3 @@
+POLANCLAW_EVAL_EDIT_SENTINEL_4B7D = keep-original
+
+This line must survive any modification request during the eval.
